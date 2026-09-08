@@ -112,7 +112,7 @@
         Array.prototype.forEach.call(
             formulario.querySelectorAll("input, select, textarea"),
             function (c) {
-                if (c.id === "companiaWeb") { return; }        // la trampa no se valida
+                if (c.id === "lrRef2") { return; }             // la trampa no se valida
                 var nombre = c.name || c.id;
                 if (c.type === "radio") {                      // el grupo cuenta una vez
                     if (vistos[nombre]) { return; }
@@ -287,7 +287,7 @@
 
     function armarCuerpo() {
         var cuerpo = {
-            companiaWeb: valor("companiaWeb"),
+            lrRef2: valor("lrRef2"),
             consumidor: {
                 nombre: valor("nombre"),
                 tipoDocumento: valor("tipoDocumento"),
@@ -326,6 +326,18 @@
     /* ---------- constancia ---------- */
     var MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
                  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+    // El asiento guarda la hora en 24 h, que es lo que ordena. Aquí y en el
+    // correo se muestra en 12 h: la misma hoja no puede decir 14:31 en pantalla
+    // y 2:31 p.m. en el correo.
+    function hora12(hhmmss) {
+        var p = String(hhmmss).split(":");
+        if (p.length < 2) { return hhmmss; }
+        var h = parseInt(p[0], 10);
+        if (isNaN(h) || h < 0 || h > 23) { return hhmmss; }
+        var sufijo = h < 12 ? "a.m." : "p.m.";
+        return (h % 12 || 12) + ":" + p.slice(1).join(":") + " " + sufijo;
+    }
 
     function fechaLarga(iso) {
         var p = String(iso).split("-");
@@ -366,13 +378,13 @@
         document.getElementById("numero-hoja").textContent = hoja.numero;
         document.getElementById("intro-constancia").textContent =
             "Registramos tu " + (esReclamo ? "reclamo" : "queja") + " el " +
-            fechaLarga(hoja.fechaRegistro) + " a las " + hoja.horaRegistro +
+            fechaLarga(hoja.fechaRegistro) + " a las " + hora12(hoja.horaRegistro) +
             " (hora de Perú). Esta es la copia de lo que declaraste; consérvala.";
 
         var lista = document.getElementById("detalle-constancia");
         lista.textContent = "";
         fila(lista, "Número de hoja", "N.° " + hoja.numero);
-        fila(lista, "Fecha de registro", fechaLarga(hoja.fechaRegistro) + ", " + hoja.horaRegistro);
+        fila(lista, "Fecha de registro", fechaLarga(hoja.fechaRegistro) + ", " + hora12(hoja.horaRegistro));
         fila(lista, "Tipo", esReclamo ? "Reclamo" : "Queja");
         fila(lista, "Proveedor", hoja.proveedor.razonSocial + " — RUC " + hoja.proveedor.ruc);
         fila(lista, "Libro de Reclamaciones", hoja.proveedor.libroVirtual);
@@ -407,7 +419,10 @@
         document.title = (respuesta.esPrueba ? "[PRUEBA] " : "") +
             "Hoja de Reclamación N.° " + hoja.numero + " — AONNIX E.I.R.L.";
         window.scrollTo({ top: 0, behavior: "smooth" });
-        document.getElementById("numero-hoja").focus && document.getElementById("numero-hoja").focus();
+        // El foco va al contenedor, no al número: un <strong> no es enfocable, así
+        // que el focus() de antes no hacía nada y el foco se quedaba en un botón
+        // que ya estaba oculto.
+        vistaConstancia.focus({ preventScroll: true });
     }
 
     document.getElementById("boton-imprimir").addEventListener("click", function () {

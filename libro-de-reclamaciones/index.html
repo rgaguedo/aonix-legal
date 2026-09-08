@@ -107,8 +107,8 @@
                     <!-- Trampa anti-robot. Fuera de la vista y fuera del orden de tabulación:
                          ningún humano la ve, así que quien la llena no es uno. -->
                     <div class="lr-trampa" aria-hidden="true">
-                        <label for="companiaWeb">No llenar este campo</label>
-                        <input type="text" id="companiaWeb" name="companiaWeb" tabindex="-1" autocomplete="off">
+                        <label for="lrRef2">No llenar este campo</label>
+                        <input type="text" id="lrRef2" name="lrRef2" tabindex="-1" autocomplete="off">
                     </div>
 
                     <fieldset class="lr-bloque">
@@ -340,7 +340,11 @@
             </div>
 
             <!-- ============ CONSTANCIA ============ -->
-            <div id="vista-constancia" hidden>
+            <!-- tabindex -1 para poder recibir el foco sin entrar en el orden de
+                 tabulación, y role=status para que el lector de pantalla anuncie la
+                 constancia al aparecer. Sin esto, quien no ve la pantalla enviaba el
+                 formulario y no se enteraba de que su hoja quedó registrada. -->
+            <div id="vista-constancia" tabindex="-1" role="status" aria-live="polite" hidden>
                 <div class="lr-constancia" id="constancia">
                     <p class="lr-sello-prueba" id="sello-prueba" hidden></p>
                     <div class="lr-constancia-cabecera">

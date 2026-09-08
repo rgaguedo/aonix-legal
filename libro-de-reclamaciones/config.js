@@ -14,7 +14,7 @@
  *           silencio.
  */
 window.LIBRO_CONFIG = {
-    ENDPOINT: "",
+    ENDPOINT: "https://494soi0jdj.execute-api.us-east-1.amazonaws.com/v1/hojas",
     MODO: "PRUEBA",
     CORREO_SOPORTE: "soporte@aonnix.com"
 };
