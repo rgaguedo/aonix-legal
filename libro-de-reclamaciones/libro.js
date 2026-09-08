@@ -32,11 +32,14 @@
     }
 
     /* ---------- estado de habilitación ---------- */
+    // Un botón apagado sin motivo visible se lee como «me falta algún campo», y
+    // el usuario se pone a buscar cuál. Aquí no falta ninguno: falta el endpoint.
     if (!CONFIG.ENDPOINT) {
         var aviso = document.getElementById("aviso-sin-endpoint");
         aviso.hidden = false;
         boton.disabled = true;
         boton.textContent = "Registro en línea no disponible";
+        boton.title = "El registro en línea todavía no está habilitado. No es un campo que falte.";
         formulario.setAttribute("aria-describedby", "aviso-sin-endpoint");
     }
 
@@ -95,15 +98,135 @@
 
     function idDeFallo(clave) { return "fallo-" + clave.replace(".", "-"); }
 
+    // El mapa de arriba va de clave del servidor a control. Para la validación
+    // de este lado hace falta al revés, y se deriva en vez de escribirse dos
+    // veces: dos listas paralelas se desincronizan al añadir un campo.
+    var CLAVE_DE_CAMPO = {};
+    Object.keys(CAMPO_DE_CLAVE).forEach(function (clave) {
+        CLAVE_DE_CAMPO[CAMPO_DE_CLAVE[clave]] = clave;
+    });
+
+    function controles() {
+        var vistos = {};
+        var lista = [];
+        Array.prototype.forEach.call(
+            formulario.querySelectorAll("input, select, textarea"),
+            function (c) {
+                if (c.id === "companiaWeb") { return; }        // la trampa no se valida
+                var nombre = c.name || c.id;
+                if (c.type === "radio") {                      // el grupo cuenta una vez
+                    if (vistos[nombre]) { return; }
+                    vistos[nombre] = true;
+                }
+                lista.push(c);
+            }
+        );
+        return lista;
+    }
+
+    function etiquetaDe(control) {
+        // Las casillas de consentimiento tienen por etiqueta un párrafo legal
+        // entero. En el resumen hace falta un nombre, no la cláusula.
+        if (control.dataset && control.dataset.nombreCorto) {
+            return control.dataset.nombreCorto;
+        }
+        var etiqueta = null;
+        if (control.type === "radio") {
+            var grupo = control.closest("fieldset");
+            etiqueta = grupo && grupo.querySelector("legend");
+        } else {
+            etiqueta = formulario.querySelector('label[for="' + control.id + '"]');
+        }
+        if (!etiqueta) { return "Este dato"; }
+        // Se quitan el asterisco de obligatorio, el «(opcional)» y el número de
+        // paso del legend: sobran dentro de una frase.
+        var texto = etiqueta.textContent
+            .replace(/\*/g, " ")
+            .replace(/\(opcional\)/gi, " ")
+            .replace(/^\s*\d+\s+/, " ")
+            .replace(/\s+/g, " ")
+            .replace(/[.:]\s*$/, "")
+            .trim();
+        return texto || "Este dato";
+    }
+
+    // El mensaje se saca del estado de validez del propio control, no de una
+    // lista de casos: así un campo nuevo hereda los mensajes sin tocar esto.
+    function mensajeDe(control) {
+        var v = control.validity;
+        if (v.valid) { return ""; }
+        if (v.valueMissing) {
+            if (control.type === "checkbox") { return "Tienes que marcar esta casilla para poder registrar la hoja."; }
+            if (control.type === "radio") { return "Elige una de las opciones."; }
+            if (control.tagName === "SELECT") { return "Elige una opción de la lista."; }
+            return "Este dato es obligatorio.";
+        }
+        if (v.typeMismatch && control.type === "email") {
+            return "El correo no tiene un formato válido. Debe incluir @ y un dominio, como nombre@dominio.com.";
+        }
+        if (v.tooShort) { return "Te faltan caracteres: el mínimo son " + control.minLength + "."; }
+        if (v.tooLong) { return "Te pasaste del máximo de " + control.maxLength + " caracteres."; }
+        if (v.patternMismatch) { return "El formato no es válido."; }
+        // Cualquier caso que no previmos: el navegador tiene su propio mensaje,
+        // y uno del navegador es mejor que uno genérico nuestro.
+        return control.validationMessage || "Revisa este dato.";
+    }
+
+    function fallosDe(control) {
+        var clave = CLAVE_DE_CAMPO[control.name] || CLAVE_DE_CAMPO[control.id];
+        return clave ? document.getElementById(idDeFallo(clave)) : null;
+    }
+
+    function marcar(control, mensaje) {
+        var parrafo = fallosDe(control);
+        if (parrafo) { parrafo.textContent = mensaje; parrafo.hidden = false; }
+        control.setAttribute("aria-invalid", "true");
+        if (parrafo && parrafo.id) { control.setAttribute("aria-errormessage", parrafo.id); }
+    }
+
+    function desmarcar(control) {
+        var parrafo = fallosDe(control);
+        if (parrafo) { parrafo.hidden = true; parrafo.textContent = ""; }
+        control.removeAttribute("aria-invalid");
+        control.removeAttribute("aria-errormessage");
+    }
+
     function limpiarFallos() {
         Array.prototype.forEach.call(document.querySelectorAll(".lr-fallo"), function (p) {
             p.hidden = true; p.textContent = "";
         });
         Array.prototype.forEach.call(document.querySelectorAll("[aria-invalid]"), function (c) {
             c.removeAttribute("aria-invalid");
+            c.removeAttribute("aria-errormessage");
         });
         errorGeneral.hidden = true;
         errorGeneral.textContent = "";
+    }
+
+    /* Revisa el formulario entero y pinta lo que falta. Devuelve los controles
+       inválidos, el primero de ellos delante.
+
+       Se revisan TODOS y no solo el primero a propósito: descubrir los errores
+       de uno en uno, enviando y volviendo, es la forma más segura de que alguien
+       abandone a mitad de un reclamo. */
+    function revisar() {
+        var malos = [];
+        controles().forEach(function (control) {
+            if (control.checkValidity()) { desmarcar(control); return; }
+            marcar(control, mensajeDe(control));
+            malos.push(control);
+        });
+        return malos;
+    }
+
+    function resumir(malos) {
+        var nombres = malos.map(etiquetaDe).filter(function (n, i, todos) {
+            return todos.indexOf(n) === i;
+        });
+        var cuantos = nombres.length === 1
+            ? "Falta o está mal un dato: "
+            : "Faltan o están mal " + nombres.length + " datos: ";
+        return cuantos + nombres.join(" · ") + ". Los marcamos en rojo más abajo.";
     }
 
     function pintarFallos(campos) {
@@ -122,10 +245,12 @@
                 if (!primero) { primero = control; }
             }
         });
-        if (primero) {
-            primero.focus({ preventScroll: true });
-            primero.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
+        if (primero) { irA(primero); }
+    }
+
+    function irA(control) {
+        control.focus({ preventScroll: true });
+        control.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     function mostrarErrorGeneral(mensaje) {
@@ -133,6 +258,22 @@
         errorGeneral.hidden = false;
         errorGeneral.scrollIntoView({ behavior: "smooth", block: "center" });
     }
+
+    /* Al corregir un campo su error desaparece solo. Un mensaje en rojo que
+       sigue ahí después de arreglarlo hace dudar de si se arregló. */
+    controles().forEach(function (control) {
+        var evento = (control.type === "checkbox" || control.type === "radio" ||
+                      control.tagName === "SELECT") ? "change" : "input";
+        control.addEventListener(evento, function () {
+            if (!control.hasAttribute("aria-invalid")) { return; }
+            if (!control.checkValidity()) { return; }
+            desmarcar(control);
+            if (!formulario.querySelector("[aria-invalid]")) {
+                errorGeneral.hidden = true;
+                errorGeneral.textContent = "";
+            }
+        });
+    });
 
     /* ---------- armado del envío ---------- */
     function valor(id) {
@@ -279,18 +420,10 @@
         if (!CONFIG.ENDPOINT) { return; }
         limpiarFallos();
 
-        if (!formulario.checkValidity()) {
-            // Solo controles: un <fieldset> que contiene un campo inválido
-            // también matchea :invalid, y no es enfocable — el foco se quedaba
-            // en el botón y el usuario no sabía a qué campo ir.
-            var invalido = formulario.querySelector(
-                "input:invalid, select:invalid, textarea:invalid"
-            );
-            if (invalido) {
-                invalido.focus();
-                invalido.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-            mostrarErrorGeneral("Faltan campos obligatorios. Revísalos y vuelve a intentarlo.");
+        var malos = revisar();
+        if (malos.length) {
+            mostrarErrorGeneral(resumir(malos));
+            irA(malos[0]);
             return;
         }
 
