@@ -260,20 +260,32 @@
     }
 
     /* Al corregir un campo su error desaparece solo. Un mensaje en rojo que
-       sigue ahí después de arreglarlo hace dudar de si se arregló. */
-    controles().forEach(function (control) {
-        var evento = (control.type === "checkbox" || control.type === "radio" ||
-                      control.tagName === "SELECT") ? "change" : "input";
-        control.addEventListener(evento, function () {
-            if (!control.hasAttribute("aria-invalid")) { return; }
-            if (!control.checkValidity()) { return; }
-            desmarcar(control);
-            if (!formulario.querySelector("[aria-invalid]")) {
-                errorGeneral.hidden = true;
-                errorGeneral.textContent = "";
-            }
-        });
-    });
+       sigue ahí después de arreglarlo hace dudar de si se arregló.
+
+       Va delegado en el formulario y no atado a cada control por un motivo que
+       costó encontrar: en un grupo de radios el error se pinta una vez, pero el
+       usuario puede marcar cualquiera de ellos. Con un listener por control
+       —y el grupo contando como uno— marcar la segunda opción no limpiaba nada,
+       porque el evento salía de un radio que no tenía listener. */
+    formulario.addEventListener("input", alCorregir, true);
+    formulario.addEventListener("change", alCorregir, true);
+
+    function alCorregir(evento) {
+        var origen = evento.target;
+        if (!origen || !origen.form) { return; }
+        // En un grupo de radios el error lo lleva el primero, que es el que se
+        // validó; hay que mirar ese, no el que acaba de pulsarse.
+        var control = origen.type === "radio"
+            ? formulario.querySelector('[name="' + origen.name + '"]')
+            : origen;
+        if (!control.hasAttribute("aria-invalid")) { return; }
+        if (!control.checkValidity()) { return; }
+        desmarcar(control);
+        if (!formulario.querySelector("[aria-invalid]")) {
+            errorGeneral.hidden = true;
+            errorGeneral.textContent = "";
+        }
+    }
 
     /* ---------- armado del envío ---------- */
     function valor(id) {
