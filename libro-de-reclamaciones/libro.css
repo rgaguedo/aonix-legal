@@ -8,7 +8,26 @@
 /* legal-shared.css fija la columna en el ancho óptimo de lectura (38rem), que
    es lo correcto para prosa y estrecho para un formulario de dos columnas.
    libro.css solo se carga en esta página, así que la ampliación no se escapa. */
-:root { --ancho-pagina: 52rem; }
+/* El mismo marco que el resto de aonnix.com: 75rem son los 1200px de
+   `.container` en el home. Cabecera, contenido y pie quedan en la misma
+   retícula que cualquier otra página del sitio, y el wordmark AONNIX cae
+   exactamente donde cae en el home.
+
+   Dentro, los bloques conservan su ancho de lectura: el home tampoco escribe
+   párrafos de 1200px, los mete en tarjetas y rejillas. Un formulario de campos
+   de 580px no se llena mejor, se llena peor. */
+:root { --ancho-pagina: 75rem; }
+
+.lr-proveedor,
+.lr-definiciones,
+.lr-formulario,
+.lr-constancia,
+.lr-aviso,
+.lr-error-general {
+    max-width: 52rem;
+    margin-left: auto;
+    margin-right: auto;
+}
 
 /* El hero de legal-shared.css centra su contenido. Esta bajada tenía ancho
    máximo pero no `margin: auto`, así que su caja quedaba pegada a la izquierda
