@@ -432,6 +432,13 @@
         $("boton-volver").addEventListener("click", function () {
             mostrar("listado"); cargarListado($("filtro").value);
         });
+        // En producción no existen hojas de prueba: se purgan antes del corte y la
+        // serie nueva no las vuelve a crear. Se retira la opción en vez de
+        // dejarla devolviendo vacío.
+        if (CFG.MODO === "PRODUCCION") {
+            var dePrueba = $("filtro").querySelector('option[value="PRUEBA"]');
+            if (dePrueba) { dePrueba.remove(); }
+        }
         $("filtro").addEventListener("change", function () { cargarListado(this.value); });
         $("orden").addEventListener("change", pintarListado);
         $("buscar").addEventListener("input", pintarListado);
