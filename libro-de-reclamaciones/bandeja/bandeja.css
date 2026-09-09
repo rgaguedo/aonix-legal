@@ -5,7 +5,11 @@
    ancho o había que desplazar en horizontal en una pantalla de escritorio. */
 :root { --ancho-pagina: 75rem; }
 
-.bn-sesion { display: flex; align-items: center; gap: var(--space-2); }
+/* `line-height` declarado, por lo mismo que la cápsula: el botón de salir son
+   14px que con el 1.6 heredado daban 22.4px de alto y dejaban la cabecera en
+   55.39 en vez de 54.75. Medio píxel, pero el que hace que el logo no caiga en
+   el mismo sitio que en el resto del sitio. */
+.bn-sesion { display: flex; align-items: center; gap: var(--space-2); line-height: 1.4; }
 .bn-correo { font-size: 0.8125rem; color: var(--ink-faint); }
 .bn-perfil:empty { display: none; }   /* sin perfil no se dibuja la cápsula */
 /* La altura va declarada, no heredada: con el `line-height` del cuerpo esta
