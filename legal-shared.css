@@ -210,7 +210,12 @@ img, svg { max-width: 100%; display: block; }
  * navegación (13.6px × 1.6 = 21.76px = 1.36rem). Sin él, una cabecera sin
  * enlaces —la de la bandeja— se encoge a 52.2px y vuelve a no coincidir. */
 .nav { font-size: 1rem; line-height: 1.6; }
-.nav-inner { min-height: 1.36rem; }
+/* En los hijos y no en `.nav-inner`: con `box-sizing: border-box` el min-height
+   del contenedor incluye sus 32px de padding, así que 1.36rem quedaba muy por
+   debajo de lo que ya medía y no hacía nada —comprobado: se aplicaba y la
+   cabecera seguía en 52.2px—. Sobre los hijos sí fija la altura de la línea
+   flex, que es lo que determina la caja. */
+.nav-inner > * { min-height: 1.36rem; }
 
 :root { --ancho-pagina: var(--measure); }
 .nav-inner { max-width: var(--ancho-pagina); }
