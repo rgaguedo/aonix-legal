@@ -114,10 +114,13 @@ body {
 img, svg { max-width: 100%; display: block; }
 
 /* ---------- Estado activo de nav embebido (header del sitio principal reusado) ---------- */
+/* El subrayado del enlace activo, sin ocupar sitio. `border-bottom` más
+   `padding-bottom` sumaban 2px al alto del enlace, y como es el elemento más
+   alto de la cabecera, se los pasaba a la cabecera entera. `box-shadow` pinta la
+   misma línea y no participa en el cálculo de la caja. */
 .nav-links a.active {
     color: var(--ink);
-    border-bottom: 1px solid var(--ink);
-    padding-bottom: 1px;
+    box-shadow: 0 1px 0 var(--ink);
 }
 
 /* ---------- Top bar / breadcrumb (legacy — se conserva por si se referencia en otra parte) ---------- */
@@ -190,6 +193,25 @@ img, svg { max-width: 100%; display: block; }
  * mueve las dos cosas a la vez y no puede desalinearlas. */
 /* En :root y no en .page, porque `.nav-inner` vive en el <header>, fuera del
    <main class="page">: un selector descendente desde .page no lo alcanzaría. */
+/* ── La cabecera es del sitio, no de esta página ──────────────────────────
+ *
+ * `body` fija 1.05rem/1.7 a propósito: mejora los párrafos legales largos. Pero
+ * el <header> es el mismo componente que sirve el home, y al heredar esa medida
+ * crecía. Comprobado a 1440px sobre el sitio en vivo:
+ *
+ *              home      Libro de Reclamaciones
+ *   header     54.75px   58.11px   (+3.36)
+ *   wordmark   17.27px   18.95px   (+1.68 más abajo)
+ *
+ * Se le devuelve la tipografía raíz para que su caja mida exactamente lo mismo
+ * que en aonnix.com. No se toca el cuerpo de la página.
+ *
+ * El `min-height` reproduce la altura que en el home dan los enlaces de
+ * navegación (13.6px × 1.6 = 21.76px = 1.36rem). Sin él, una cabecera sin
+ * enlaces —la de la bandeja— se encoge a 52.2px y vuelve a no coincidir. */
+.nav { font-size: 1rem; line-height: 1.6; }
+.nav-inner { min-height: 1.36rem; }
+
 :root { --ancho-pagina: var(--measure); }
 .nav-inner { max-width: var(--ancho-pagina); }
 
