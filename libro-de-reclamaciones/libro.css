@@ -8,8 +8,7 @@
 /* legal-shared.css fija la columna en el ancho óptimo de lectura (38rem), que
    es lo correcto para prosa y estrecho para un formulario de dos columnas.
    libro.css solo se carga en esta página, así que la ampliación no se escapa. */
-.page .shell,
-.page .page-footer { max-width: 52rem; }
+:root { --ancho-pagina: 52rem; }
 
 /* El hero de legal-shared.css centra su contenido. Esta bajada tenía ancho
    máximo pero no `margin: auto`, así que su caja quedaba pegada a la izquierda

@@ -179,8 +179,22 @@ img, svg { max-width: 100%; display: block; }
     padding-bottom: var(--space-6);
 }
 
+/* El ancho de la página, en una sola variable.
+ *
+ * Antes cada capa fijaba el suyo: `.nav-inner` iba a 1200px en todo el sitio
+ * mientras el contenido de estas páginas iba a 38rem, y en una pantalla ancha el
+ * wordmark AONNIX quedaba casi 300px a la izquierda de la primera letra del
+ * texto. Se leía como si la cabecera perteneciera a otra página.
+ *
+ * Ahora la cabecera enmarca al contenido: quien cambie el ancho de una página
+ * mueve las dos cosas a la vez y no puede desalinearlas. */
+/* En :root y no en .page, porque `.nav-inner` vive en el <header>, fuera del
+   <main class="page">: un selector descendente desde .page no lo alcanzaría. */
+:root { --ancho-pagina: var(--measure); }
+.nav-inner { max-width: var(--ancho-pagina); }
+
 .shell {
-    max-width: var(--measure);
+    max-width: var(--ancho-pagina, var(--measure));
     margin: 0 auto;
     padding: clamp(2.5rem, 6vw, var(--space-6)) clamp(1.25rem, 5vw, 2rem) var(--space-5);
 }
@@ -582,7 +596,7 @@ details.faq summary:hover { color: var(--gold-text); }
     border-top: 1px solid var(--rule);
     margin-top: var(--space-5);
     padding: var(--space-4) clamp(1.25rem, 5vw, 2rem) var(--space-3);
-    max-width: var(--measure);
+    max-width: var(--ancho-pagina, var(--measure));
     margin-left: auto;
     margin-right: auto;
     text-align: center;
