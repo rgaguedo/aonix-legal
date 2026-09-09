@@ -19,7 +19,6 @@
 :root { --ancho-pagina: 75rem; }
 
 .lr-proveedor,
-.lr-definiciones,
 .lr-formulario,
 .lr-constancia,
 .lr-aviso,
@@ -46,18 +45,14 @@
     text-wrap: balance;
 }
 
-.lr-amparo {
-    max-width: 34rem;
-    margin: var(--space-2) auto 0;
-    font-size: 0.8125rem;
-    line-height: 1.6;
-    color: var(--ink-faint);
-    text-wrap: balance;
-}
 
 /* ---------- proveedor (sección fija del Anexo I) ---------- */
 .lr-proveedor {
-    margin: var(--space-5) 0 var(--space-4);
+    /* `auto` a los lados, no `0`: este bloque tiene su propio max-width y con
+       margen lateral cero se pegaba a la izquierda del marco de 1200, 152px por
+       delante del formulario. El margen abreviado va después de la regla que
+       centra, así que la ganaba. */
+    margin: var(--space-5) auto var(--space-4);
     padding: var(--space-3);
     background: var(--surface);
     border: 1px solid var(--rule);
@@ -88,29 +83,6 @@
 }
 
 /* ---------- reclamo vs. queja ---------- */
-.lr-definiciones {
-    display: grid;
-    gap: var(--space-2);
-    margin-bottom: var(--space-4);
-}
-@media (min-width: 40rem) { .lr-definiciones { grid-template-columns: 1fr 1fr; } }
-.lr-definiciones > div {
-    padding: var(--space-2) var(--space-3);
-    border-left: 3px solid var(--gold);
-    background: var(--gold-soft);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-.lr-definiciones h3 { margin: 0 0 4px; font-size: 0.9375rem; color: var(--ink); }
-.lr-definiciones p { margin: 0; font-size: 0.875rem; color: var(--ink-muted); line-height: 1.6; }
-
-/* ---------- aviso de no habilitado ---------- */
-.lr-aviso {
-    margin: var(--space-3) 0;
-    padding: var(--space-3);
-    border: 1px solid #d97706;
-    background: rgba(217, 119, 6, 0.08);
-    border-radius: var(--radius);
-}
 .lr-aviso p { margin: 0 0 var(--space-1); color: var(--ink); }
 .lr-aviso p:last-child { margin-bottom: 0; }
 
