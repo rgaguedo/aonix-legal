@@ -54,15 +54,33 @@
             <section id="vista-listado" hidden>
                 <div class="bn-cabecera">
                     <h1>Hojas registradas</h1>
-                    <label class="bn-filtro">
-                        <span>Ver</span>
-                        <select id="filtro">
-                            <option value="PENDIENTE">Pendientes de respuesta</option>
-                            <option value="RESPONDIDA">Ya respondidas</option>
-                            <option value="PRUEBA">De prueba</option>
-                        </select>
-                    </label>
+                    <div class="bn-controles">
+                        <label class="bn-filtro">
+                            <span>Ver</span>
+                            <select id="filtro">
+                                <option value="PENDIENTE">Pendientes de respuesta</option>
+                                <option value="RESPONDIDA">Ya respondidas</option>
+                                <option value="PRUEBA">De prueba</option>
+                            </select>
+                        </label>
+                        <label class="bn-filtro">
+                            <span>Ordenar</span>
+                            <select id="orden">
+                                <option value="recientes">Más recientes primero</option>
+                                <option value="urgentes">Más urgentes primero</option>
+                            </select>
+                        </label>
+                    </div>
                 </div>
+                <div class="bn-buscador">
+                    <label for="buscar" class="bn-oculto">Buscar una hoja</label>
+                    <input type="search" id="buscar" placeholder="Buscar por número, consumidor o descripción…"
+                           autocomplete="off" spellcheck="false">
+                    <p class="bn-conteo" id="conteo" role="status"></p>
+                </div>
+                <!-- Aviso de lo que vence, para que ordenar por recientes no
+                     entierre una hoja a punto de pasarse de plazo. -->
+                <p class="bn-alerta" id="alerta-plazos" role="status" hidden></p>
                 <div class="bn-tabla-contenedor">
                     <table class="bn-tabla">
                         <thead>
@@ -70,6 +88,7 @@
                                 <th scope="col">N.º de hoja</th>
                                 <th scope="col">Tipo</th>
                                 <th scope="col">Consumidor</th>
+                                <th scope="col">Registrada</th>
                                 <th scope="col">Límite</th>
                                 <th scope="col">Plazo</th>
                                 <th scope="col"><span class="bn-oculto">Acción</span></th>

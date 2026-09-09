@@ -157,54 +157,139 @@
         return { clase: "normal", texto: "Faltan " + habiles(dias) };
     }
 
+    /* El listado se guarda tal como llegó y se vuelve a pintar en memoria al
+       buscar o reordenar. Ir al servidor por cada tecla sería gastar una llamada
+       autenticada para filtrar cincuenta filas que ya están aquí. */
+    var hojasCargadas = [];
+
+    function correlativoDe(numero) {
+        // El número es la posición en la serie. `PRUEBA-000000011-2026` y
+        // `000000011-2026` comparten los nueve dígitos; ordenar por la cadena
+        // pondría todas las de prueba juntas y no por antigüedad.
+        var m = String(numero).match(/(\d{9})/);
+        return m ? parseInt(m[1], 10) : 0;
+    }
+
+    function ordenar(hojas, criterio) {
+        var copia = hojas.slice();
+        if (criterio === "urgentes") {
+            // Lo que vence antes, primero: el orden en que hay que atenderlas.
+            copia.sort(function (a, b) {
+                return a.fechaLimiteRespuesta.localeCompare(b.fechaLimiteRespuesta) ||
+                       correlativoDe(a.numero) - correlativoDe(b.numero);
+            });
+        } else {
+            copia.sort(function (a, b) { return correlativoDe(b.numero) - correlativoDe(a.numero); });
+        }
+        return copia;
+    }
+
+    function coincide(hoja, texto) {
+        if (!texto) { return true; }
+        var aguja = texto.toLowerCase();
+        return [hoja.numero, hoja.tipo, hoja.consumidor, hoja.descripcion]
+            .some(function (campo) { return String(campo || "").toLowerCase().indexOf(aguja) !== -1; });
+    }
+
+    function avisarDeLoQueVence(hojas) {
+        var aviso = $("alerta-plazos");
+        var vencidas = hojas.filter(function (h) { return h.estado !== "RESPONDIDA" && h.diasHabilesRestantes < 0; }).length;
+        var hoy = hojas.filter(function (h) { return h.estado !== "RESPONDIDA" && h.diasHabilesRestantes === 0; }).length;
+        if (!vencidas && !hoy) { aviso.hidden = true; aviso.textContent = ""; return; }
+        var partes = [];
+        if (vencidas) { partes.push(vencidas + (vencidas === 1 ? " hoja vencida" : " hojas vencidas")); }
+        if (hoy) { partes.push(hoy + (hoy === 1 ? " vence hoy" : " vencen hoy")); }
+        aviso.textContent = partes.join(" · ") + ". Ordena por «más urgentes primero» para verlas arriba.";
+        aviso.hidden = false;
+    }
+
+    function filaVacia(mensaje) {
+        var fila = document.createElement("tr");
+        fila.className = "bn-fila--vacia";
+        var celda = document.createElement("td");
+        celda.colSpan = 6;                       // seis columnas, no cinco
+        celda.className = "bn-vacio";
+        celda.textContent = mensaje;
+        fila.appendChild(celda);
+        return fila;
+    }
+
+    function pintarListado() {
+        var cuerpo = $("cuerpo-listado");
+        var texto = $("buscar").value.trim();
+        var visibles = ordenar(hojasCargadas.filter(function (h) { return coincide(h, texto); }),
+                               $("orden").value);
+        cuerpo.textContent = "";
+
+        $("conteo").textContent = !hojasCargadas.length ? ""
+            : texto ? visibles.length + " de " + hojasCargadas.length + " hojas"
+                    : hojasCargadas.length + (hojasCargadas.length === 1 ? " hoja" : " hojas");
+
+        if (!visibles.length) {
+            cuerpo.appendChild(filaVacia(
+                texto ? "Ninguna hoja coincide con «" + texto + "»."
+                      : ($("filtro").value === "PENDIENTE"
+                          ? "No hay hojas pendientes de respuesta."
+                          : "No hay hojas en este estado.")));
+            return;
+        }
+
+        visibles.forEach(function (h) {
+            var u = urgencia(h.diasHabilesRestantes, h.estado);
+            var fila = document.createElement("tr");
+            fila.className = "bn-fila bn-fila--" + (u.clase || "normal");
+            fila.tabIndex = 0;
+            fila.setAttribute("role", "button");
+            fila.setAttribute("aria-label",
+                (h.estado === "RESPONDIDA" ? "Ver" : "Responder") + " la hoja " + h.numero);
+            [
+                h.numero,
+                h.tipo,
+                h.consumidor,
+                fechaLarga(h.fechaRegistro),
+                fechaLarga(h.fechaLimiteRespuesta),
+                u.texto
+            ].forEach(function (valor, i) {
+                var celda = document.createElement("td");
+                // textContent: lo que escribió el consumidor se muestra, no se
+                // interpreta. La bandeja es el sitio donde un XSS almacenado
+                // tendría más valor para un atacante.
+                celda.textContent = valor;
+                if (i === 0) { celda.className = "bn-numero"; }
+                if (i === 5) { celda.className = "bn-urgencia bn-urgencia--" + (u.clase || "normal"); }
+                fila.appendChild(celda);
+            });
+            var accion = document.createElement("td");
+            var boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "bn-enlace";
+            boton.tabIndex = -1;              // la fila ya es enfocable; no se tabula dos veces
+            boton.textContent = h.estado === "RESPONDIDA" ? "Ver" : "Responder";
+            accion.appendChild(boton); fila.appendChild(accion);
+
+            function abrir() { abrirHoja(h.numero); }
+            fila.addEventListener("click", abrir);
+            fila.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrir(); }
+            });
+            cuerpo.appendChild(fila);
+        });
+    }
+
     async function cargarListado(estado) {
         aviso("");
-        $("cuerpo-listado").innerHTML = '<tr><td colspan="5">Cargando…</td></tr>';
+        $("cuerpo-listado").textContent = "";
+        $("cuerpo-listado").appendChild(filaVacia("Cargando…"));
         try {
             var d = await pedir(CFG.API + "?estado=" + encodeURIComponent(estado));
-            var cuerpo = $("cuerpo-listado");
-            cuerpo.textContent = "";
-            if (!d.hojas.length) {
-                var vacia = document.createElement("tr");
-                var celda = document.createElement("td");
-                celda.colSpan = 5;
-                celda.className = "bn-vacio";
-                celda.textContent = estado === "PENDIENTE"
-                    ? "No hay hojas pendientes de respuesta."
-                    : "No hay hojas en este estado.";
-                vacia.appendChild(celda); cuerpo.appendChild(vacia);
-                return;
-            }
-            d.hojas.forEach(function (h) {
-                var u = urgencia(h.diasHabilesRestantes, h.estado);
-                var fila = document.createElement("tr");
-                fila.className = "bn-fila bn-fila--" + (u.clase || "normal");
-                [
-                    h.numero,
-                    h.tipo,
-                    h.consumidor,
-                    fechaLarga(h.fechaLimiteRespuesta),
-                    u.texto
-                ].forEach(function (valor, i) {
-                    var celda = document.createElement("td");
-                    // textContent: lo que escribió el consumidor se muestra, no
-                    // se interpreta. La bandeja es el sitio donde un XSS
-                    // almacenado tendría más valor para un atacante.
-                    celda.textContent = valor;
-                    if (i === 0) { celda.className = "bn-numero"; }
-                    if (i === 4) { celda.className = "bn-urgencia bn-urgencia--" + (u.clase || "normal"); }
-                    fila.appendChild(celda);
-                });
-                var accion = document.createElement("td");
-                var boton = document.createElement("button");
-                boton.type = "button";
-                boton.className = "bn-enlace";
-                boton.textContent = h.estado === "RESPONDIDA" ? "Ver" : "Responder";
-                boton.addEventListener("click", function () { abrirHoja(h.numero); });
-                accion.appendChild(boton); fila.appendChild(accion);
-                cuerpo.appendChild(fila);
-            });
-        } catch (e) { aviso(e.message, "error"); }
+            hojasCargadas = d.hojas || [];
+            avisarDeLoQueVence(hojasCargadas);
+            pintarListado();
+        } catch (e) {
+            hojasCargadas = [];
+            $("cuerpo-listado").textContent = "";
+            aviso(e.message, "error");
+        }
     }
 
     function dato(lista, etiqueta, valor) {
@@ -310,6 +395,9 @@
             mostrar("listado"); cargarListado($("filtro").value);
         });
         $("filtro").addEventListener("change", function () { cargarListado(this.value); });
+        $("orden").addEventListener("change", pintarListado);
+        $("buscar").addEventListener("input", pintarListado);
+        $("buscar").addEventListener("search", pintarListado);   // la X de Safari
 
         var params = new URLSearchParams(window.location.search);
         if (params.get("error")) {
