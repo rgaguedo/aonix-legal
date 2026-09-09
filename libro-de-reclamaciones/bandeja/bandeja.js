@@ -221,9 +221,20 @@
                                $("orden").value);
         cuerpo.textContent = "";
 
-        $("conteo").textContent = !hojasCargadas.length ? ""
+        var conteo = $("conteo");
+        conteo.textContent = !hojasCargadas.length ? ""
             : texto ? visibles.length + " de " + hojasCargadas.length + " hojas"
                     : hojasCargadas.length + (hojasCargadas.length === 1 ? " hoja" : " hojas");
+        // Si el servidor dijo que hay más, se dice: una lista incompleta que
+        // parece completa es peor que una lista que avisa de que le falta.
+        if (cursorPendiente) {
+            conteo.appendChild(document.createTextNode(" · hay más sin cargar "));
+            var mas = document.createElement("button");
+            mas.type = "button"; mas.className = "bn-enlace";
+            mas.textContent = "Cargar el resto";
+            mas.addEventListener("click", function () { cargarListado($("filtro").value, true); });
+            conteo.appendChild(mas);
+        }
 
         if (!visibles.length) {
             cuerpo.appendChild(filaVacia(
@@ -276,18 +287,45 @@
         });
     }
 
-    async function cargarListado(estado) {
+    /* El servidor devuelve 50 hojas por página y un cursor para seguir. Antes se
+       pedía una vez y se tiraba el cursor, así que a partir de la hoja 51 el
+       resto no aparecía y nada lo decía.
+
+       Y no era solo que faltaran: el servidor ordena por fecha límite ascendente,
+       o sea que esas 50 son las MÁS ANTIGUAS. Buscar u ordenar «más recientes
+       primero» sobre ellas habría devuelto respuestas seguras y equivocadas —la
+       hoja registrada esta mañana ni siquiera estaría en la lista—.
+
+       Se siguen los cursores hasta agotarlos. Con el volumen de un libro de
+       reclamaciones eso es una sola petición durante años; el tope de páginas
+       está para que un día raro no se convierta en cien llamadas encadenadas, y
+       cuando se alcanza se dice en pantalla en vez de callarlo. */
+    var TOPE_DE_PAGINAS = 10;   // 500 hojas
+    var cursorPendiente = null;
+
+    async function cargarListado(estado, seguir) {
         aviso("");
-        $("cuerpo-listado").textContent = "";
-        $("cuerpo-listado").appendChild(filaVacia("Cargando…"));
+        if (!seguir) {
+            hojasCargadas = []; cursorPendiente = null;
+            $("cuerpo-listado").textContent = "";
+            $("cuerpo-listado").appendChild(filaVacia("Cargando…"));
+        }
         try {
-            var d = await pedir(CFG.API + "?estado=" + encodeURIComponent(estado));
-            hojasCargadas = d.hojas || [];
+            var paginas = 0;
+            var cursor = seguir ? cursorPendiente : null;
+            do {
+                var url = CFG.API + "?estado=" + encodeURIComponent(estado) +
+                          (cursor ? "&cursor=" + encodeURIComponent(cursor) : "");
+                var d = await pedir(url);
+                hojasCargadas = hojasCargadas.concat(d.hojas || []);
+                cursor = d.cursor || null;
+                paginas += 1;
+            } while (cursor && paginas < TOPE_DE_PAGINAS);
+            cursorPendiente = cursor;
             avisarDeLoQueVence(hojasCargadas);
             pintarListado();
         } catch (e) {
-            hojasCargadas = [];
-            $("cuerpo-listado").textContent = "";
+            if (!seguir) { hojasCargadas = []; $("cuerpo-listado").textContent = ""; }
             aviso(e.message, "error");
         }
     }
