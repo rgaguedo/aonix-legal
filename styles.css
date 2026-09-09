@@ -88,6 +88,14 @@
 
 html {
     scroll-behavior: smooth;
+    /* Reserva siempre el hueco de la barra de desplazamiento.
+     *
+     * Sin esto, una página corta que no desplaza tiene 15px más de ancho útil
+     * que una larga, y un contenedor centrado de 1200px arranca 7.5px más a la
+     * derecha. Medido en la bandeja: el wordmark caía en 132.5px con barra y en
+     * 140px sin ella, contra los 132.5px del home. Ese salto es el que se veía
+     * al cambiar de página, y no dependía de la página sino de su longitud. */
+    scrollbar-gutter: stable;
 }
 
 body {
